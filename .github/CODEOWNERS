@@ -1,0 +1,7 @@
+# custos-infra owners
+# Every CI workflow change is core-team gated — accidentally breaking the
+# reusable workflows breaks every other repo's CI.
+*                            @custos/core
+.github/workflows/           @custos/core
+docker/                      @custos/core
+lint/                        @custos/core

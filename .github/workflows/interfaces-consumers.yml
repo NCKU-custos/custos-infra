@@ -1,0 +1,57 @@
+name: interfaces-consumers (reusable)
+
+# Triggered from custos-interfaces PRs. For each consumer repo, dispatches a
+# build of that repo against the interfaces PR ref. Required check on the
+# interfaces PR — merge is blocked until every consumer builds clean.
+
+on:
+  workflow_call:
+    inputs:
+      interfaces_ref:
+        type: string
+        required: true
+        description: "The custos-interfaces ref (PR head SHA) to test consumers against."
+    secrets:
+      CUSTOS_CI_APP_ID:
+        required: true
+      CUSTOS_CI_PRIVATE_KEY:
+        required: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer:
+          - custos-perception
+          - custos-control
+          - custos-navigation
+          - custos-simulation
+          - custos-novatek-sdk-wrapper
+    steps:
+      - name: Generate GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CUSTOS_CI_APP_ID }}
+          private-key: ${{ secrets.CUSTOS_CI_PRIVATE_KEY }}
+          owner: NCKU-custos
+          repositories: ${{ matrix.consumer }}
+
+      - name: Dispatch consumer build
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: NCKU-custos
+          repo: ${{ matrix.consumer }}
+          github_token: ${{ steps.app_token.outputs.token }}
+          workflow_file_name: build.yml
+          ref: main
+          wait_interval: 30
+          client_payload: |
+            {
+              "interfaces_ref": "${{ inputs.interfaces_ref }}"
+            }
+          propagate_failure: true
+          trigger_workflow: true
+          wait_workflow: true

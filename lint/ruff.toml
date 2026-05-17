@@ -1,0 +1,31 @@
+# Custos Python lint config — shared across all repos.
+# Symlinked or fetched from this canonical copy by every code repo's lint job.
+
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "RUF", # ruff-specific
+    "S",   # bandit (security)
+]
+ignore = [
+    "E501",  # line length handled by formatter
+    "S101",  # assert allowed in tests
+]
+
+[lint.per-file-ignores]
+"test/**/*.py"     = ["S101", "S105", "S106"]
+"**/__init__.py"   = ["F401"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

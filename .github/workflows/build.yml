@@ -1,0 +1,31 @@
+name: build
+
+# Bootstrap-only inline workflow. The reusable workflows in this repo can't
+# call themselves — they don't exist yet on `main` at the very first push.
+# Once this repo's reusables are merged, refactor to call them.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint workflows
+        run: |
+          pip install yamllint
+          yamllint -d "{rules: {line-length: {max: 200}}}" .github/workflows/
+      - name: Hadolint Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/base/Dockerfile
+
+  docker-build:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build base image
+        run: docker build -t ros-base:test docker/base/

@@ -1,0 +1,32 @@
+---
+# Custos C++ style: ROS2 default with a few tightenings.
+# Symlinked or fetched from this canonical copy by every code repo's lint job.
+Language:        Cpp
+BasedOnStyle:    Google
+ColumnLimit:     100
+IndentWidth:     2
+TabWidth:        2
+UseTab:          Never
+AccessModifierOffset: -2
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Attach
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReflowComments: true
+SortIncludes: CaseSensitive
+Standard:        c++20
+IncludeBlocks:   Regroup
+IncludeCategories:
+  - Regex:           '^<.*\.h>'
+    Priority:        1
+  - Regex:           '^<.*'
+    Priority:        2
+  - Regex:           '.*'
+    Priority:        3
+...

@@ -1,0 +1,66 @@
+name: lint (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      run_clang_format:
+        type: boolean
+        default: true
+      run_ruff:
+        type: boolean
+        default: true
+      run_ament_lint:
+        type: boolean
+        default: true
+      run_secret_scan:
+        type: boolean
+        default: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch shared lint configs
+        run: |
+          mkdir -p .lint-cache
+          curl -sSL https://raw.githubusercontent.com/NCKU-custos/custos-infra/main/lint/.clang-format -o .lint-cache/.clang-format
+          curl -sSL https://raw.githubusercontent.com/NCKU-custos/custos-infra/main/lint/ruff.toml -o .lint-cache/ruff.toml
+
+      - name: clang-format check
+        if: ${{ inputs.run_clang_format }}
+        uses: jidicula/clang-format-action@v4.13.0
+        with:
+          clang-format-version: '18'
+          fallback-style: 'file'
+
+      - name: Set up Python
+        if: ${{ inputs.run_ruff }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: ruff check
+        if: ${{ inputs.run_ruff }}
+        run: |
+          pip install ruff
+          ruff check --config .lint-cache/ruff.toml .
+          ruff format --check --config .lint-cache/ruff.toml .
+
+      - name: ament_lint
+        if: ${{ inputs.run_ament_lint }}
+        run: |
+          # ament_lint runs inside the ROS2 environment; only run if package.xml present
+          if [ -f package.xml ] || find . -mindepth 2 -name package.xml -print -quit | grep -q .; then
+            docker run --rm -v "$PWD":/ws ghcr.io/NCKU-custos/ros-base:lyrical-26.04 \
+              bash -c "cd /ws && source /opt/ros/lyrical/setup.bash && ament_lint_auto || true"
+          fi
+
+      - name: Secret scan (gitleaks)
+        if: ${{ inputs.run_secret_scan }}
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

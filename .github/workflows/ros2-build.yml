@@ -1,0 +1,63 @@
+name: ros2-build (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      ros_distro:
+        type: string
+        default: lyrical
+      ubuntu_version:
+        type: string
+        default: "26.04"
+      packages_to_build:
+        type: string
+        default: ""
+        description: "Optional colcon --packages-up-to selector. Empty = build all."
+      interfaces_ref:
+        type: string
+        default: ""
+        description: "Override custos-interfaces ref. Used by interfaces-consumers.yml to test PRs pre-merge."
+
+jobs:
+  build:
+    runs-on: ubuntu-${{ inputs.ubuntu_version }}
+    container:
+      image: ghcr.io/NCKU-custos/ros-base:${{ inputs.ros_distro }}-${{ inputs.ubuntu_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Import workspace dependencies
+        run: |
+          mkdir -p src
+          if [ -f ros2.repos ]; then
+            vcs import src < ros2.repos
+          fi
+          # Allow overriding interfaces ref for pre-merge consumer testing
+          if [ -n "${{ inputs.interfaces_ref }}" ] && [ -d src/custos-interfaces ]; then
+            git -C src/custos-interfaces fetch origin "${{ inputs.interfaces_ref }}"
+            git -C src/custos-interfaces checkout FETCH_HEAD
+          fi
+
+      - name: Install ROS dependencies
+        run: |
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y
+
+      - name: colcon build
+        shell: bash
+        run: |
+          source /opt/ros/${{ inputs.ros_distro }}/setup.bash
+          if [ -n "${{ inputs.packages_to_build }}" ]; then
+            colcon build --packages-up-to ${{ inputs.packages_to_build }}
+          else
+            colcon build
+          fi
+
+      - name: colcon test
+        shell: bash
+        run: |
+          source /opt/ros/${{ inputs.ros_distro }}/setup.bash
+          colcon test
+          colcon test-result --verbose
