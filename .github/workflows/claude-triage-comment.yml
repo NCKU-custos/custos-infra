@@ -17,8 +17,11 @@ on:
         type: string
         default: "6"
     secrets:
+      # Provide EITHER auth method below — both optional (subscription token or API key).
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
       ANTHROPIC_API_KEY:
-        required: true
+        required: false
 
 jobs:
   comment:
@@ -43,6 +46,7 @@ jobs:
       - name: Triage comment
         uses: anthropics/claude-code-action@v1
         with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
           claude_args: --disallowedTools Edit,Write,Bash,NotebookEdit --max-turns ${{ inputs.max_turns }}
