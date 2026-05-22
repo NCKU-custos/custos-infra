@@ -1,0 +1,66 @@
+name: claude-triage-comment (reusable)
+
+# Posts ONE feasibility-triage comment on a brain-dump issue.
+#
+# Comment-only by construction: the caller grants `contents: read` (no write), so the
+# token physically cannot commit or open PRs. `--disallowedTools` is defense-in-depth
+# on top. Called by each repo's `triage-assist.yml`. See custos-bringup ADRs for rules.
+
+on:
+  workflow_call:
+    inputs:
+      adr_repo:
+        type: string
+        default: NCKU-custos/custos-bringup
+        description: "Repo whose docs/adr/ is fetched as constraint context."
+      max_turns:
+        type: string
+        default: "6"
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest   # lightweight; intentionally not the ROS ubuntu-26.04 build runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch stack ADRs for constraint context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADR_REPO: ${{ inputs.adr_repo }}
+        run: |
+          set -uo pipefail
+          mkdir -p .triage-context
+          : > .triage-context/STACK_ADRS.md
+          for f in $(gh api "repos/${ADR_REPO}/contents/docs/adr" --jq '.[].name' 2>/dev/null); do
+            printf '\n===== %s =====\n' "$f" >> .triage-context/STACK_ADRS.md
+            gh api -H "Accept: application/vnd.github.raw" \
+              "repos/${ADR_REPO}/contents/docs/adr/${f}" >> .triage-context/STACK_ADRS.md 2>/dev/null || true
+          done
+
+      - name: Triage comment
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          claude_args: --disallowedTools Edit,Write,Bash,NotebookEdit --max-turns ${{ inputs.max_turns }}
+          prompt: |
+            You are the triage assistant for the Custos drone software stack. A brain-dump
+            issue (#${{ github.event.issue.number }}) just opened in ${{ github.repository }};
+            its title and body are in your context.
+
+            Read ./CLAUDE.md (this repo's rules) and ./.triage-context/STACK_ADRS.md (the
+            stack's ADRs) for constraints BEFORE judging.
+
+            Post exactly ONE comment on the issue, in this shape:
+            - **Intent** — one line restating what the author seems to want.
+            - **Feasibility** — feasible / needs-design / out-of-scope, one sentence why.
+            - **Where it lands** — which custos-* repo(s) this belongs in.
+            - **Conflicts** — any ADR or hard-rule conflict, especially NOVATEK isolation
+              (ADR 0010), no-submodules (0008), interfaces wire-break (0009). "None obvious" is fine.
+            - **Effort** — S / M / L, one phrase.
+            - **Next step** — the single most useful action to move this forward.
+
+            Be concise. Do NOT edit files, create branches, or open PRs — only comment.
