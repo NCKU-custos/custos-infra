@@ -27,8 +27,11 @@ on:
         default: ""
         description: "The App bot account's numeric user-id (for the DCO sign-off email + signing identity). REQUIRED for draft mode to work."
     secrets:
+      # Provide EITHER auth method below — both optional (subscription token or API key).
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
       ANTHROPIC_API_KEY:
-        required: true
+        required: false
       CUSTOS_TRIAGE_APP_ID:
         required: true
       CUSTOS_TRIAGE_PRIVATE_KEY:
@@ -69,6 +72,7 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token }}
           use_commit_signing: true
