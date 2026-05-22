@@ -1,0 +1,121 @@
+name: claude-triage-draft (reusable)
+
+# Drafts a small PR addressing a brain-dump issue, when a maintainer applies `draft-it`.
+#
+# The action prepares a branch + signed commits; it does NOT open PRs — so the final
+# step opens a DRAFT PR from the branch the action reports via its `branch_name` output.
+# Requires the `custos-triage-bot` GitHub App (contents/pull_requests/issues: write).
+#
+# DORMANT until the App exists AND `bot_id` is set to the App's bot user-id: with an empty
+# bot_id the Signed-off-by email is malformed and the DCO check will (correctly) reject it.
+
+on:
+  workflow_call:
+    inputs:
+      adr_repo:
+        type: string
+        default: NCKU-custos/custos-bringup
+      max_turns:
+        type: string
+        default: "15"
+      bot_name:
+        type: string
+        default: "custos-triage-bot[bot]"
+        description: "Git committer name; MUST equal the custos-triage-bot App's bot login."
+      bot_id:
+        type: string
+        default: ""
+        description: "The App bot account's numeric user-id (for the DCO sign-off email + signing identity). REQUIRED for draft mode to work."
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+      CUSTOS_TRIAGE_APP_ID:
+        required: true
+      CUSTOS_TRIAGE_PRIVATE_KEY:
+        required: true
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint custos-triage-bot App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CUSTOS_TRIAGE_APP_ID }}
+          private-key: ${{ secrets.CUSTOS_TRIAGE_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app_token.outputs.token }}
+
+      - name: Fetch stack ADRs for constraint context
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          ADR_REPO: ${{ inputs.adr_repo }}
+        run: |
+          set -uo pipefail
+          mkdir -p .triage-context
+          : > .triage-context/STACK_ADRS.md
+          for f in $(gh api "repos/${ADR_REPO}/contents/docs/adr" --jq '.[].name' 2>/dev/null); do
+            printf '\n===== %s =====\n' "$f" >> .triage-context/STACK_ADRS.md
+            gh api -H "Accept: application/vnd.github.raw" \
+              "repos/${ADR_REPO}/contents/docs/adr/${f}" >> .triage-context/STACK_ADRS.md 2>/dev/null || true
+          done
+
+      - name: Draft change
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app_token.outputs.token }}
+          use_commit_signing: true
+          bot_name: ${{ inputs.bot_name }}
+          bot_id: ${{ inputs.bot_id }}
+          claude_args: --max-turns ${{ inputs.max_turns }}
+          prompt: |
+            A maintainer applied `draft-it` to issue #${{ github.event.issue.number }} in
+            ${{ github.repository }}, asking you to draft a change. The issue's title and
+            body are in your context.
+
+            Read ./CLAUDE.md and ./.triage-context/STACK_ADRS.md for the rules FIRST.
+
+            Then EITHER:
+            (a) If this is a small, well-scoped change: implement the SMALLEST reasonable
+                version on a new branch, matching the repo's existing conventions. Use a
+                Conventional Commit subject (feat:/fix:/docs:/chore: …). End EVERY commit
+                message with this exact trailer line:
+                  Signed-off-by: ${{ inputs.bot_name }} <${{ inputs.bot_id }}+${{ inputs.bot_name }}@users.noreply.github.com>
+            (b) Otherwise (not actionable as code, needs design, or too big for a small
+                reviewable PR): post ONE comment explaining why and what you'd propose,
+                and STOP without committing.
+
+            Hard constraints — never violate:
+            - Do NOT add a dependency on, or import from, custos-novatek-sdk-wrapper (ADR 0010).
+            - Do NOT modify .github/workflows/**, CODEOWNERS, LICENSE, or SECURITY.md.
+            - Stay within this repo's stated purpose (see its CLAUDE.md).
+
+      - name: Open draft PR
+        if: ${{ steps.claude.outputs.branch_name != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          BRANCH: ${{ steps.claude.outputs.branch_name }}
+          ISSUE: ${{ github.event.issue.number }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          set -uo pipefail
+          existing="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for $BRANCH; idempotent no-op."
+            exit 0
+          fi
+          git fetch origin "$BRANCH" --quiet || true
+          title="$(git log -1 --format=%s "origin/$BRANCH" 2>/dev/null || true)"
+          [ -z "$title" ] && title="chore: triage draft for #${ISSUE}"
+          gh pr create --draft --base "$BASE" --head "$BRANCH" \
+            --title "$title" \
+            --body "Auto-drafted by the triage assistant from #${ISSUE}.
+
+          ⚠ Review carefully — CODEOWNERS approval is required before merge. Closes #${ISSUE} when merged."
