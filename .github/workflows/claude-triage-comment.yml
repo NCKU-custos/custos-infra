@@ -15,7 +15,7 @@ on:
         description: "Repo whose docs/adr/ is fetched as constraint context."
       max_turns:
         type: string
-        default: "6"
+        default: "20"
     secrets:
       # Provide EITHER auth method below — both optional (subscription token or API key).
       CLAUDE_CODE_OAUTH_TOKEN:
