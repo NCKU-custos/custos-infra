@@ -61,6 +61,13 @@ jobs:
 
       - name: Secret scan (gitleaks)
         if: ${{ inputs.run_secret_scan }}
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Use the gitleaks OSS CLI directly: the gitleaks-action wrapper now
+          # requires a paid GITLEAKS_LICENSE for org repos, while the CLI itself
+          # is MIT-licensed and free. Org-native push protection covers history.
+          GITLEAKS_VERSION=8.18.4
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/gitleaks" gitleaks
+          "$RUNNER_TEMP/gitleaks/gitleaks" version
+          "$RUNNER_TEMP/gitleaks/gitleaks" detect --source . --no-git --redact --no-banner

@@ -17,7 +17,8 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 # must be configured before they can be installed (done in the next RUN).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl gnupg lsb-release locales \
-        build-essential git python3-pip \
+        build-essential git git-lfs python3-pip \
+    && git lfs install --system \
     && locale-gen en_US.UTF-8 \
     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
