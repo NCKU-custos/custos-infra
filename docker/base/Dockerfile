@@ -12,6 +12,9 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
+# pipefail so a failed curl in the keyring pipe below aborts the build (DL4006).
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Base toolchain + ROS2 apt source.
 # colcon/rosdep/vcstool live in the ROS2 apt repo, not Ubuntu base, so the repo
 # must be configured before they can be installed (done in the next RUN).
@@ -38,7 +41,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # rosdep init (idempotent — silently succeed if already initialized in a layer)
 RUN rosdep init || true
 USER root
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Default entrypoint sources ROS env then exec's the command
 COPY entrypoint.sh /entrypoint.sh
