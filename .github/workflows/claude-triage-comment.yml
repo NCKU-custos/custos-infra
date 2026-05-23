@@ -49,6 +49,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
+          # Action posts/updates the comment itself (tag mode) — no Bash/tool needed by Claude,
+          # so the OAuth token can't be exfiltrated via an injected shell command.
+          track_progress: true
           claude_args: --disallowedTools Edit,Write,Bash,NotebookEdit --max-turns ${{ inputs.max_turns }}
           prompt: |
             You are the triage assistant for the Custos drone software stack. A brain-dump
