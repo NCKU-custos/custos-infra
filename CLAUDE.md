@@ -6,8 +6,8 @@ Workspace-wide rules and state caveats live at `../CLAUDE.md` (= `/space/drone/C
 
 ## State of this repo
 
-- Reusable workflows in `.github/workflows/`: `ros2-build.yml`, `lint.yml`, `interfaces-consumers.yml`, `release-please.yml`, `build.yml`. All scaffolded; none have ever run because no consumer repo has committed yet.
-- Docker base at `docker/base/Dockerfile` (Ubuntu 26.04 + ROS2 Lyrical) plus `entrypoint.sh`. **Not yet pushed to GHCR** as `ghcr.io/NCKU-custos/ros-base:lyrical-26.04`; the devcontainer and most workflows assume it exists.
+- Reusable workflows in `.github/workflows/`: `ros2-build.yml`, `lint.yml`, `interfaces-consumers.yml`, `release-please.yml`, `build.yml`. All scaffolded; consumers' `build.yml` now references them, but no end-to-end run has gone green yet — see workspace caveats (GHCR image not pushed; Lyrical apt packages land 2026-05-22).
+- Docker base at `docker/base/Dockerfile` (Ubuntu 26.04 + ROS2 Lyrical) plus `entrypoint.sh`. **Not yet pushed to GHCR** as `ghcr.io/ncku-custos/ros-base:lyrical-26.04`; the devcontainer and most workflows assume it exists.
 - Lint configs at `lint/`: `.clang-format`, `ruff.toml`, `ament_lint_config/`. Symlinked or referenced from every consumer repo.
 - `release-please-config.json` + `.release-please-manifest.json` are simple-package mode (this repo's own version line).
 - No ROS package — not a `colcon` target. There is no `package.xml`.
@@ -15,7 +15,7 @@ Workspace-wide rules and state caveats live at `../CLAUDE.md` (= `/space/drone/C
 ## Cross-repo edges
 
 - **Depends on:** nothing — leaf of the dependency graph.
-- **Depended on by:** every other Custos repo via `uses: NCKU-custos/custos-infra/.github/workflows/<name>@<ref>` (workflow consumption) and via `FROM ghcr.io/NCKU-custos/ros-base:lyrical-26.04` (image consumption).
+- **Depended on by:** every other Custos repo via `uses: NCKU-custos/custos-infra/.github/workflows/<name>@<ref>` (workflow consumption) and via `FROM ghcr.io/ncku-custos/ros-base:lyrical-26.04` (image consumption).
 - **GitHub App reference:** `interfaces-consumers.yml` consumes the org secrets `CUSTOS_CI_APP_ID` and `CUSTOS_CI_PRIVATE_KEY` (ADR 0009). App `custos-ci` (ID: 3744266) is registered, installed org-wide, and secrets are set.
 
 ## Repo-specific hard rules
@@ -29,7 +29,7 @@ Workspace-wide rules and state caveats live at `../CLAUDE.md` (= `/space/drone/C
 
 ```bash
 # Build the Docker base locally (the GHCR push has not happened yet).
-docker build -t ghcr.io/NCKU-custos/ros-base:lyrical-26.04 docker/base/
+docker build -t ghcr.io/ncku-custos/ros-base:lyrical-26.04 docker/base/
 
 # Validate workflow YAML.
 yamllint .github/workflows/
