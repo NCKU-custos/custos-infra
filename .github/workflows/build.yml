@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: yamllint workflows
@@ -24,7 +24,7 @@ jobs:
           dockerfile: docker/base/Dockerfile
 
   docker-build:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Build base image

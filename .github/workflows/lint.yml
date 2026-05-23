@@ -18,7 +18,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,7 +55,7 @@ jobs:
         run: |
           # ament_lint runs inside the ROS2 environment; only run if package.xml present
           if [ -f package.xml ] || find . -mindepth 2 -name package.xml -print -quit | grep -q .; then
-            docker run --rm -v "$PWD":/ws ghcr.io/NCKU-custos/ros-base:lyrical-26.04 \
+            docker run --rm -v "$PWD":/ws ghcr.io/ncku-custos/ros-base:lyrical-26.04 \
               bash -c "cd /ws && source /opt/ros/lyrical/setup.bash && ament_lint_auto || true"
           fi
 

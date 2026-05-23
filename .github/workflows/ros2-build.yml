@@ -20,9 +20,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-${{ inputs.ubuntu_version }}
+    # Host only provides Docker; the ROS2 environment is the container below.
+    # GitHub-hosted runners have no ubuntu-26.04 label, so the host is pinned to
+    # 24.04 while ubuntu_version selects the container's Ubuntu (ADR 0011).
+    runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/NCKU-custos/ros-base:${{ inputs.ros_distro }}-${{ inputs.ubuntu_version }}
+      image: ghcr.io/ncku-custos/ros-base:${{ inputs.ros_distro }}-${{ inputs.ubuntu_version }}
     steps:
       - uses: actions/checkout@v4
         with:
