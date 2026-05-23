@@ -17,7 +17,7 @@ on:
         default: NCKU-custos/custos-bringup
       max_turns:
         type: string
-        default: "15"
+        default: "30"
       bot_name:
         type: string
         default: "custos-triage-bot[bot]"
