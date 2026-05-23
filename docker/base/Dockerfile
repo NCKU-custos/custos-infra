@@ -12,11 +12,12 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-# Base toolchain + ROS2 apt source
+# Base toolchain + ROS2 apt source.
+# colcon/rosdep/vcstool live in the ROS2 apt repo, not Ubuntu base, so the repo
+# must be configured before they can be installed (done in the next RUN).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl gnupg lsb-release locales \
-        build-essential git python3-pip python3-colcon-common-extensions \
-        python3-rosdep python3-vcstool \
+        build-essential git python3-pip \
     && locale-gen en_US.UTF-8 \
     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
@@ -24,10 +25,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         > /etc/apt/sources.list.d/ros2.list \
     && rm -rf /var/lib/apt/lists/*
 
-# ROS2 base meta-package
+# ROS2 base meta-package + dev tooling (all from the ROS2 apt repo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-ros-base \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        python3-colcon-common-extensions \
+        python3-rosdep \
+        python3-vcstool \
     && rm -rf /var/lib/apt/lists/*
 
 # rosdep init (idempotent — silently succeed if already initialized in a layer)
